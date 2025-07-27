@@ -1,8 +1,8 @@
 module github.com/alecthomas/kong-toml
 
-go 1.21
+go 1.24
 
 require (
-	github.com/alecthomas/kong v0.8.1
+	github.com/alecthomas/kong v1.12.1
 	github.com/pelletier/go-toml v1.9.5
 )
