@@ -1,0 +1,40 @@
+# Configuration with hyphenated keys
+max-connections = 100
+read-timeout = "30s"
+write-timeout = "30s"
+idle-timeout = "2m"
+keep-alive = true
+
+[http-server]
+bind-address = "127.0.0.1"
+listen-port = 8080
+max-header-size = 8192
+request-timeout = "10s"
+
+[http-server.rate-limiting]
+enabled = true
+requests-per-minute = 1000
+burst-size = 50
+
+[database-pool]
+max-open-connections = 25
+max-idle-connections = 5
+connection-max-lifetime = "1h"
+connection-max-idle-time = "10m"
+
+[database-pool.health-check]
+enabled = true
+check-interval = "30s"
+timeout = "5s"
+
+[feature-flags]
+enable-auth = true
+enable-metrics = false
+enable-debug-mode = true
+auto-migrate = false
+
+[ssl-config]
+cert-file = "/etc/ssl/certs/server.crt"
+key-file = "/etc/ssl/private/server.key"
+ca-file = "/etc/ssl/certs/ca.crt"
+verify-client = false

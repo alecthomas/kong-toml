@@ -1,0 +1,17 @@
+[section
+missing-closing-bracket = true# Invalid TOML file for testing error handling
+
+# Duplicate keys
+duplicate = "first"
+duplicate = "second"
+
+invalid-array = [1, 2, "mixed", true,
+# Missing closing bracket
+
+# Invalid table
+[invalid..table]
+key = "value"
+
+# Unterminated string
+unterminated = "this string never ends
+# Invalid syntax

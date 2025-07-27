@@ -1,0 +1,46 @@
+# Nested configuration with complex structures
+name = "myapp"
+version = "1.0.0"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+timeout = 30
+
+[server.tls]
+enabled = true
+cert = "/path/to/cert.pem"
+key = "/path/to/key.pem"
+
+[database]
+driver = "postgres"
+host = "localhost"
+port = 5432
+
+[database.connection]
+max-idle = 10
+max-open = 100
+max-lifetime = "1h"
+
+[database.migrations]
+enabled = true
+path = "./migrations"
+
+[logging]
+level = "debug"
+format = "json"
+
+[logging.outputs]
+console = true
+file = "/var/log/app.log"
+syslog = false
+
+[features]
+auth = true
+metrics = true
+tracing = false
+
+[features.cache]
+enabled = true
+ttl = "5m"
+size = 1000
