@@ -5,10 +5,16 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
 )
+
+type MatchingPrefix struct {
+	MaxRetries    int
+	MaxRetriesAge time.Duration
+}
 
 type SimpleCLI struct {
 	Host    string `help:"Server host"`
@@ -82,9 +88,9 @@ type HyphenatedCLI struct {
 	KeepAlive      bool   `help:"Keep alive" name:"keep-alive"`
 
 	HTTPServer struct {
-		BindAddress   string `help:"Bind address" name:"bind-address"`
-		ListenPort    int    `help:"Listen port" name:"listen-port"`
-		MaxHeaderSize int    `help:"Max header size" name:"max-header-size"`
+		BindAddress    string `help:"Bind address" name:"bind-address"`
+		ListenPort     int    `help:"Listen port" name:"listen-port"`
+		MaxHeaderSize  int    `help:"Max header size" name:"max-header-size"`
 		RequestTimeout string `help:"Request timeout" name:"request-timeout"`
 
 		RateLimiting struct {
@@ -95,10 +101,10 @@ type HyphenatedCLI struct {
 	} `embed:"" prefix:"http-server-"`
 
 	DatabasePool struct {
-		MaxOpenConnections     int    `help:"Max open connections" name:"max-open-connections"`
-		MaxIdleConnections     int    `help:"Max idle connections" name:"max-idle-connections"`
-		ConnectionMaxLifetime  string `help:"Connection max lifetime" name:"connection-max-lifetime"`
-		ConnectionMaxIdleTime  string `help:"Connection max idle time" name:"connection-max-idle-time"`
+		MaxOpenConnections    int    `help:"Max open connections" name:"max-open-connections"`
+		MaxIdleConnections    int    `help:"Max idle connections" name:"max-idle-connections"`
+		ConnectionMaxLifetime string `help:"Connection max lifetime" name:"connection-max-lifetime"`
+		ConnectionMaxIdleTime string `help:"Connection max idle time" name:"connection-max-idle-time"`
 
 		HealthCheck struct {
 			Enabled       bool   `help:"Enable health check"`
@@ -172,9 +178,9 @@ func TestLoader(t *testing.T) {
 					},
 				},
 				Database: struct {
-					Driver string `help:"Database driver"`
-					Host   string `help:"Database host"`
-					Port   int    `help:"Database port"`
+					Driver     string `help:"Database driver"`
+					Host       string `help:"Database host"`
+					Port       int    `help:"Database port"`
 					Connection struct {
 						MaxIdle     int    `help:"Max idle connections" name:"max-idle"`
 						MaxOpen     int    `help:"Max open connections" name:"max-open"`
@@ -206,8 +212,8 @@ func TestLoader(t *testing.T) {
 					},
 				},
 				Logging: struct {
-					Level  string `help:"Log level"`
-					Format string `help:"Log format"`
+					Level   string `help:"Log level"`
+					Format  string `help:"Log format"`
 					Outputs struct {
 						Console bool   `help:"Enable console output"`
 						File    string `help:"Log file"`
@@ -346,6 +352,15 @@ func TestLoader(t *testing.T) {
 			CLI:      &SimpleCLI{},
 			TOMLFile: "invalid.toml",
 			WantErr:  true,
+		},
+		{
+			Name:     "MatchingPrefix",
+			CLI:      &MatchingPrefix{},
+			TOMLFile: "matchingprefix.toml",
+			Expected: &MatchingPrefix{
+				MaxRetries:    10,
+				MaxRetriesAge: time.Second * 15,
+			},
 		},
 	}
 

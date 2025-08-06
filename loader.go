@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/repr"
 	"github.com/pelletier/go-toml"
 )
 
@@ -17,6 +18,7 @@ func Loader(r io.Reader) (kong.Resolver, error) {
 	if named, ok := r.(interface{ Name() string }); ok {
 		filename = named.Name()
 	}
+	repr.Println(tree.ToMap())
 	return &Resolver{filename: filename, tree: tree.ToMap()}, nil
 }
 
@@ -27,7 +29,7 @@ type Resolver struct {
 	tree     map[string]any
 }
 
-func (r *Resolver) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
+func (r *Resolver) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Flag) (any, error) {
 	value, ok := r.findValue(parent, flag)
 	if !ok {
 		return nil, nil
@@ -36,13 +38,12 @@ func (r *Resolver) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Fla
 }
 
 func (r *Resolver) Validate(app *kong.Application) error {
-	// TODO: Validate the configuration maps to valid flags.
 	return nil
 }
 
 func (r *Resolver) findValue(parent *kong.Path, flag *kong.Flag) (any, bool) {
 	keys := []string{
-		strings.ReplaceAll(parent.Node().Path(), " ", "-") + "-" + flag.Name,
+		strings.Join(append(strings.Split(parent.Node().Path(), "-"), flag.Name), "-"),
 		flag.Name,
 	}
 	for _, key := range keys {
@@ -62,7 +63,8 @@ func (r *Resolver) findValueParts(prefix string, suffix []string, tree map[strin
 		if branch, ok := value.(map[string]any); ok {
 			return r.findValueParts(suffix[0], suffix[1:], branch)
 		}
-	} else if len(suffix) > 0 {
+	}
+	if len(suffix) > 0 {
 		return r.findValueParts(prefix+"-"+suffix[0], suffix[1:], tree)
 	}
 	return nil, false

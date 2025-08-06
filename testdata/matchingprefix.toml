@@ -1,0 +1,2 @@
+max-retries = 10
+max-retries-age = "15s"
