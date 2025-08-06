@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/repr"
 	"github.com/pelletier/go-toml"
 )
 
@@ -18,7 +17,6 @@ func Loader(r io.Reader) (kong.Resolver, error) {
 	if named, ok := r.(interface{ Name() string }); ok {
 		filename = named.Name()
 	}
-	repr.Println(tree.ToMap())
 	return &Resolver{filename: filename, tree: tree.ToMap()}, nil
 }
 
