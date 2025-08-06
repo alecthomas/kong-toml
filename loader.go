@@ -1,7 +1,10 @@
 package kongtoml
 
 import (
+	"fmt"
 	"io"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -36,7 +39,34 @@ func (r *Resolver) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Fla
 }
 
 func (r *Resolver) Validate(app *kong.Application) error {
+	configKeys := map[string]bool{}
+	flattenTree("", r.tree, configKeys)
+	_ = kong.Visit(app, func(node kong.Visitable, next kong.Next) error {
+		if flag, ok := node.(*kong.Flag); ok {
+			delete(configKeys, flag.Name)
+		}
+		return next(nil)
+	})
+	if len(configKeys) > 0 {
+		keys := slices.Collect(maps.Keys(configKeys))
+		return fmt.Errorf("%s: unknown configuration keys: %s", r.filename, strings.Join(keys, ", "))
+	}
 	return nil
+}
+
+func flattenTree(prefix string, tree any, flags map[string]bool) {
+	switch tree := tree.(type) {
+	case map[string]any:
+		for key, value := range tree {
+			if prefix == "" {
+				flattenTree(key, value, flags)
+			} else {
+				flattenTree(prefix+"-"+key, value, flags)
+			}
+		}
+	default:
+		flags[prefix] = true
+	}
 }
 
 func (r *Resolver) findValue(parent *kong.Path, flag *kong.Flag) (any, bool) {
@@ -44,6 +74,10 @@ func (r *Resolver) findValue(parent *kong.Path, flag *kong.Flag) (any, bool) {
 		strings.Join(append(strings.Split(parent.Node().Path(), "-"), flag.Name), "-"),
 		flag.Name,
 	}
+	return r.findValueFromKeys(keys)
+}
+
+func (r *Resolver) findValueFromKeys(keys []string) (any, bool) {
 	for _, key := range keys {
 		parts := strings.Split(key, "-")
 		if value, ok := r.findValueParts(parts[0], parts[1:], r.tree); ok {

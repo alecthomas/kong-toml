@@ -3,13 +3,3 @@ host = "localhost"
 port = 8080
 debug = true
 timeout = 30
-
-[database]
-host = "db.example.com"
-port = 5432
-name = "myapp"
-ssl = false
-
-[logging]
-level = "info"
-file = "/var/log/app.log"

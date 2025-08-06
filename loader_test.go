@@ -130,11 +130,12 @@ type HyphenatedCLI struct {
 
 func TestLoader(t *testing.T) {
 	tests := []struct {
-		Name     string
-		CLI      interface{}
-		TOMLFile string
-		Expected interface{}
-		WantErr  bool
+		Name         string
+		CLI          any
+		TOMLFile     string
+		Expected     any
+		WantErr      bool
+		WantParseErr bool
 	}{
 		{
 			Name:     "SimpleConfiguration",
@@ -362,6 +363,12 @@ func TestLoader(t *testing.T) {
 				MaxRetriesAge: time.Second * 15,
 			},
 		},
+		{
+			Name:         "InvalidKeys",
+			CLI:          &SimpleCLI{},
+			TOMLFile:     "invalidkeys.toml",
+			WantParseErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -387,7 +394,7 @@ func TestLoader(t *testing.T) {
 
 			// Parse empty args to trigger configuration loading
 			_, err = parser.Parse([]string{})
-			if tt.WantErr {
+			if tt.WantParseErr {
 				assert.Error(t, err)
 				return
 			}
@@ -406,18 +413,6 @@ func TestResolver_Resolve(t *testing.T) {
 
 	resolver := loader.(*Resolver)
 	assert.True(t, resolver != nil)
-}
-
-func TestResolver_Validate(t *testing.T) {
-	loader, err := Loader(strings.NewReader(`host = "localhost"`))
-	assert.NoError(t, err)
-
-	resolver := loader.(*Resolver)
-	app := &kong.Application{}
-
-	// Currently Validate is a no-op, so it should always return nil
-	err = resolver.Validate(app)
-	assert.NoError(t, err)
 }
 
 func TestLoaderWithInvalidTOML(t *testing.T) {
