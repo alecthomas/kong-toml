@@ -128,6 +128,14 @@ type HyphenatedCLI struct {
 	} `embed:"" prefix:"ssl-config-"`
 }
 
+type MapCLI struct {
+	Labels map[string]string `help:"Labels"`
+
+	Server struct {
+		Headers map[string]string `help:"Headers"`
+	} `embed:"" prefix:"server-"`
+}
+
 func TestLoader(t *testing.T) {
 	tests := []struct {
 		Name         string
@@ -361,6 +369,19 @@ func TestLoader(t *testing.T) {
 			Expected: &MatchingPrefix{
 				MaxRetries:    10,
 				MaxRetriesAge: time.Second * 15,
+			},
+		},
+		{
+			Name:     "MapTables",
+			CLI:      &MapCLI{},
+			TOMLFile: "maps.toml",
+			Expected: &MapCLI{
+				Labels: map[string]string{"team": "platform", "app.example/tier": "web"},
+				Server: struct {
+					Headers map[string]string `help:"Headers"`
+				}{
+					Headers: map[string]string{"X-Request-Source": "config"},
+				},
 			},
 		},
 		{

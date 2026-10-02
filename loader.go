@@ -39,14 +39,18 @@ func (r *Resolver) Resolve(kctx *kong.Context, parent *kong.Path, flag *kong.Fla
 }
 
 func (r *Resolver) Validate(app *kong.Application) error {
-	configKeys := map[string]bool{}
-	flattenTree("", r.tree, configKeys)
+	flags := map[string]*kong.Flag{}
 	_ = kong.Visit(app, func(node kong.Visitable, next kong.Next) error {
 		if flag, ok := node.(*kong.Flag); ok {
-			delete(configKeys, flag.Name)
+			flags[flag.Name] = flag
 		}
 		return next(nil)
 	})
+	configKeys := map[string]bool{}
+	flattenTree("", r.tree, flags, configKeys)
+	for name := range flags {
+		delete(configKeys, name)
+	}
 	if len(configKeys) > 0 {
 		keys := slices.Collect(maps.Keys(configKeys))
 		return fmt.Errorf("%s: unknown configuration keys: %s", r.filename, strings.Join(keys, ", "))
@@ -54,18 +58,20 @@ func (r *Resolver) Validate(app *kong.Application) error {
 	return nil
 }
 
-func flattenTree(prefix string, tree any, flags map[string]bool) {
-	switch tree := tree.(type) {
-	case map[string]any:
-		for key, value := range tree {
-			if prefix == "" {
-				flattenTree(key, value, flags)
-			} else {
-				flattenTree(prefix+"-"+key, value, flags)
-			}
+// flattenTree records the hyphen-joined key of every leaf value. A table whose
+// key names a map flag is that flag's value, so it is a leaf rather than a section.
+func flattenTree(prefix string, tree any, flags map[string]*kong.Flag, keys map[string]bool) {
+	branch, ok := tree.(map[string]any)
+	if !ok || (prefix != "" && flags[prefix] != nil && flags[prefix].IsMap()) {
+		keys[prefix] = true
+		return
+	}
+	for key, value := range branch {
+		if prefix == "" {
+			flattenTree(key, value, flags, keys)
+		} else {
+			flattenTree(prefix+"-"+key, value, flags, keys)
 		}
-	default:
-		flags[prefix] = true
 	}
 }
 

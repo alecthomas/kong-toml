@@ -1,0 +1,4 @@
+labels = { team = "platform", "app.example/tier" = "web" }
+
+[server.headers]
+X-Request-Source = "config"
