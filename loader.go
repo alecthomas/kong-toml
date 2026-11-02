@@ -1,6 +1,7 @@
 package kongtoml
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -8,19 +9,24 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 )
 
 func Loader(r io.Reader) (kong.Resolver, error) {
-	tree, err := toml.LoadReader(r)
-	if err != nil {
+	var tree map[string]any
+	if err := toml.NewDecoder(r).Decode(&tree); err != nil {
+		var derr *toml.DecodeError
+		if errors.As(err, &derr) {
+			row, col := derr.Position()
+			return nil, fmt.Errorf("%d:%d: %w", row, col, err)
+		}
 		return nil, err
 	}
 	var filename string
 	if named, ok := r.(interface{ Name() string }); ok {
 		filename = named.Name()
 	}
-	return &Resolver{filename: filename, tree: tree.ToMap()}, nil
+	return &Resolver{filename: filename, tree: tree}, nil
 }
 
 var _ kong.Resolver = (*Resolver)(nil)
