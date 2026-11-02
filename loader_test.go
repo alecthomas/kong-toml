@@ -1,6 +1,7 @@
 package kongtoml
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/kong"
+	"github.com/pelletier/go-toml/v2"
 )
 
 type MatchingPrefix struct {
@@ -126,6 +128,18 @@ type HyphenatedCLI struct {
 		CAFile       string `help:"CA file" name:"ca-file"`
 		VerifyClient bool   `help:"Verify client" name:"verify-client"`
 	} `embed:"" prefix:"ssl-config-"`
+}
+
+type TypesCLI struct {
+	Count   int64         `help:"Count"`
+	Ratio   float64       `help:"Ratio"`
+	Tags    []string      `help:"Tags"`
+	Ports   []int         `help:"Ports"`
+	Started time.Time     `help:"Started"`
+	Day     string        `help:"Day"`
+	Timeout time.Duration `help:"Timeout"`
+
+	OuterInnerDepth int `help:"Depth"`
 }
 
 type MapCLI struct {
@@ -385,6 +399,21 @@ func TestLoader(t *testing.T) {
 			},
 		},
 		{
+			Name:     "ValueTypes",
+			CLI:      &TypesCLI{},
+			TOMLFile: "types.toml",
+			Expected: &TypesCLI{
+				Count:           9007199254740993,
+				Ratio:           0.25,
+				Tags:            []string{"a", "b"},
+				Ports:           []int{80, 443},
+				Started:         time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
+				Day:             "2024-01-02",
+				Timeout:         15 * time.Second,
+				OuterInnerDepth: 2,
+			},
+		},
+		{
 			Name:         "InvalidKeys",
 			CLI:          &SimpleCLI{},
 			TOMLFile:     "invalidkeys.toml",
@@ -441,6 +470,49 @@ func TestLoaderWithInvalidTOML(t *testing.T) {
 
 	_, err := Loader(strings.NewReader(invalidTOML))
 	assert.Error(t, err)
+}
+
+func TestLoaderTreeValueTypes(t *testing.T) {
+	loader, err := Loader(strings.NewReader(`
+count = 42
+ratio = 1.5
+tags = ["a", "b"]
+started = 2024-01-02T03:04:05Z
+day = 2024-01-02
+
+[outer.inner]
+depth = 2
+
+[[servers]]
+name = "alpha"
+
+[[servers]]
+name = "beta"
+`))
+	assert.NoError(t, err)
+
+	expected := map[string]any{
+		"count":   int64(42),
+		"ratio":   1.5,
+		"tags":    []any{"a", "b"},
+		"started": time.Date(2024, 1, 2, 3, 4, 5, 0, time.UTC),
+		"day":     toml.LocalDate{Year: 2024, Month: 1, Day: 2},
+		"outer":   map[string]any{"inner": map[string]any{"depth": int64(2)}},
+		"servers": []any{
+			map[string]any{"name": "alpha"},
+			map[string]any{"name": "beta"},
+		},
+	}
+	assert.Equal(t, expected, loader.(*Resolver).tree)
+}
+
+func TestLoaderErrorPosition(t *testing.T) {
+	_, err := Loader(strings.NewReader("host = \"localhost\"\nport = \n"))
+	assert.Error(t, err)
+	assert.True(t, strings.HasPrefix(err.Error(), "2:"), "missing position: %s", err)
+
+	var derr *toml.DecodeError
+	assert.True(t, errors.As(err, &derr))
 }
 
 func TestLoaderWithNamedReader(t *testing.T) {
